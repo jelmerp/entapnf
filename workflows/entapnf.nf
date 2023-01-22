@@ -16,6 +16,13 @@ for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true
 // Check mandatory parameters
 if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input FASTA file not specified!' }
 
+// EnTap config file
+if (params.entap_config) {
+    ch_entap_config_file = channel.fromPath(params.entap_config, checkIfExists: true)
+} else {
+    ch_entap_config_file = channel.fromPath("${baseDir}/assets/entap_config.ini", checkIfExists: true)
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     CONFIG FILES
@@ -306,7 +313,7 @@ workflow ENTAPNF {
     // EnTAP
     //
     if (!params.skip_entap) {
-        entap_config("${baseDir}/assets/entap_config.ini")
+        entap_config(ch_entap_config_file)
 
         // Create a channel containing all of the combined blast output files
         ch_blast_results = Channel.empty()
@@ -339,7 +346,7 @@ workflow ENTAPNF {
             }
         }
 
-        entap_run(channel.fromPath(params.input), entap_dbs, "${baseDir}/assets/entap_config.ini",
+        entap_run(channel.fromPath(params.input), entap_dbs, ch_entap_config_file,
             params.seq_type, entap_config.out.entap_db, entap_config.out.eggnog_db,
             entap_config.out.data_eggnog, ch_blast_results.collect(), interproscan_combine.out.tsv)
     }
