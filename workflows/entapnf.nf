@@ -138,7 +138,7 @@ workflow ENTAPNF {
     // BLAST sequences against ExPASy SwissProt using Diamond.
     //
     if (params.data_sprot) {
-        db = [ file(params.data_sprot + '/uniprot_sprot.dmnd', checkIfExists: true) ]
+        db = [ file(params.data_sprot + '/uniprot_sprot.dmnd', checkIfExists: true) ] //TODO input diamond db directly
         entap_dbs.add(db[0])
         if (params.seq_type == 'pep') {
             blastp_sprot(ch_split_seqs.sprot, db, 'xml', '')
@@ -346,9 +346,15 @@ workflow ENTAPNF {
             }
         }
 
-        entap_run(channel.fromPath(params.input), entap_dbs, ch_entap_config_file,
-            params.seq_type, entap_config.out.entap_db, entap_config.out.eggnog_db,
-            entap_config.out.data_eggnog, ch_blast_results.collect(), interproscan_combine.out.tsv)
+        entap_run(channel.fromPath(params.input),
+            entap_dbs,
+            ch_entap_config_file,
+            params.seq_type,
+            entap_config.out.entap_db,
+            entap_config.out.eggnog_db,
+            entap_config.out.data_eggnog,
+            ch_blast_results.collect(),
+            interproscan_combine.out.tsv)
     }
 
 }
