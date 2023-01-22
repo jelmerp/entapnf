@@ -16,6 +16,8 @@ process ENTAP_RUN {
 
     output:
     path ('outfiles/final_results/**'), emit: tsv
+    path "outfiles/*txt", emit: logs
+    path "finalconf*", emit: final_config
     path "versions.yml", emit: versions
 
     when:
@@ -27,10 +29,10 @@ process ENTAP_RUN {
     def db_list = dbs.join(" -d \$PWD/")
     """
     # Update the config file so it can find the eggnong diamond file
-    cp $entap_config new.$entap_config
+    cp $entap_config finalconf.$entap_config
     CWD=`echo \$PWD | perl -p -e 's/\\\\//\\\\\\\\\\\\//g'`
-    perl -pi -e "s/eggnog-dmnd=eggnog_proteins.dmnd/eggnog-dmnd=\$CWD\\\\/$data_eggnog/" new.$entap_config
-    perl -pi -e "s/eggnog-sql=eggnog.db/eggnog-sql=\$CWD\\\\/$eggnog_db/" new.$entap_config
+    perl -pi -e "s/eggnog-dmnd=eggnog_proteins.dmnd/eggnog-dmnd=\$CWD\\\\/$data_eggnog/" finalconf.$entap_config
+    perl -pi -e "s/eggnog-sql=eggnog.db/eggnog-sql=\$CWD\\\\/$eggnog_db/" finalconf.$entap_config
 
     # Link the blast files to the directory EnTAP expects so it doesn't
     # rerun those.
@@ -47,7 +49,7 @@ process ENTAP_RUN {
     # Run EnTAP
     EnTAP $run_type \\
         -t $task.cpus \\
-        --ini new.$entap_config \\
+        --ini finalconf.$entap_config \\
         --input $fasta \\
         -d \$PWD/$db_list \\
         --out-dir \$PWD/outfiles
