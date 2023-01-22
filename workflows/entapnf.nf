@@ -52,6 +52,8 @@ include { PARSE_BLASTXML as parse_blastp_refseq} from '../modules/local/parse_bl
 include { PARSE_BLASTXML as parse_blastx_refseq} from '../modules/local/parse_blastxml.nf'
 include { PARSE_BLASTXML as parse_blastp_nr} from '../modules/local/parse_blastxml.nf'
 include { PARSE_BLASTXML as parse_blastx_nr} from '../modules/local/parse_blastxml.nf'
+include { PARSE_BLASTXML as parse_blastp_custom} from '../modules/local/parse_blastxml.nf'
+include { PARSE_BLASTXML as parse_blastx_custom} from '../modules/local/parse_blastxml.nf'
 
 include { BLAST_COMBINE as combine_blastp_sprot} from '../modules/local/blast_combine.nf'
 include { BLAST_COMBINE as combine_blastx_sprot} from '../modules/local/blast_combine.nf'
@@ -61,6 +63,9 @@ include { BLAST_COMBINE as combine_blastp_refseq} from '../modules/local/blast_c
 include { BLAST_COMBINE as combine_blastx_refseq} from '../modules/local/blast_combine.nf'
 include { BLAST_COMBINE as combine_blastp_nr} from '../modules/local/blast_combine.nf'
 include { BLAST_COMBINE as combine_blastx_nr} from '../modules/local/blast_combine.nf'
+include { BLAST_COMBINE as combine_blastp_custom} from '../modules/local/blast_combine.nf'
+include { BLAST_COMBINE as combine_blastx_custom} from '../modules/local/blast_combine.nf'
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,6 +93,8 @@ include { DIAMOND_BLASTP as blastp_orthodb } from '../modules/nf-core/diamond/bl
 include { DIAMOND_BLASTX as blastx_orthodb } from '../modules/nf-core/diamond/blastx/main.nf'
 include { DIAMOND_BLASTP as blastp_string } from '../modules/nf-core/diamond/blastp/main.nf'
 include { DIAMOND_BLASTX as blastx_string } from '../modules/nf-core/diamond/blastx/main.nf'
+include { DIAMOND_BLASTP as blastp_custom } from '../modules/nf-core/diamond/blastp/main.nf'
+include { DIAMOND_BLASTX as blastx_custom } from '../modules/nf-core/diamond/blastx/main.nf'
 
 
 /*
@@ -127,9 +134,9 @@ workflow ENTAPNF {
             orthodb: [[id: it[0].id  + '_vs_orthodb'], it[1]]
             string: [[id: it[0].id  + '_vs_string'], it[1]]
             trembl: [[id: it[0].id  + '_vs_trembl'], it[1]]
+            custom: [[id: it[0].id  + '_vs_custom'], it[1]]
             ipr: it
         }
-    //ch_split_seqs.sprot.view()
 
     // Houses the list of diamond database files for EnTAP
     entap_dbs = []
@@ -246,6 +253,34 @@ workflow ENTAPNF {
     }
 
     //
+    // BLAST sequences against a custom DB using Diamond.
+    //
+    if (params.data_custom) {
+        db = [ file(params.data_custom, checkIfExists: true) ]
+        entap_dbs.add(db[0])
+
+        if (params.seq_type == 'pep') {
+            blastp_custom(ch_split_seqs.custom, db, 'xml', '')
+            parse_blastp_custom(blastp_custom.out.xml)
+            parse_blastp_custom.out.blast_txt
+                .map { it[1] }
+                .collect()
+                .set { blastp_custom_txt }
+            combine_blastp_custom(blastp_custom_txt, 'blastp', entap_sequence_filename, 'custom')
+        }
+
+        if (params.seq_type == 'nuc') {
+            blastx_custom(ch_split_seqs.custom, db, 'xml', '')
+            parse_blastx_custom(blastx_custom.out.xml)
+            parse_blastx_custom.out.blast_txt
+                .map { it[1] }
+                .collect()
+                .set { blastx_custom_txt }
+            combine_blastx_custom(blastx_custom_txt, 'blastx', entap_sequence_filename, 'custom')
+        }
+    }
+
+    //
     // BLAST sequences against OrthoDB using Diamond.
     //
     if (params.data_orthodb) {
@@ -330,6 +365,9 @@ workflow ENTAPNF {
             if (params.data_trembl) {
                 ch_blast_results = ch_blast_results.concat(combine_blastp_trembl.out.outfile);
             }
+            if (params.data_custom) {
+                ch_blast_results = ch_blast_results.concat(combine_blastp_custom.out.outfile);
+            }
         }
         if (params.seq_type == 'nuc') {
             if (params.data_sprot) {
@@ -343,6 +381,9 @@ workflow ENTAPNF {
             }
             if (params.data_trembl) {
                 ch_blast_results = ch_blast_results.concat(combine_blastx_trembl.out.outfile);
+            }
+            if (params.data_custom) {
+                ch_blast_results = ch_blast_results.concat(combine_blastx_custom.out.outfile);
             }
         }
 
