@@ -1,5 +1,5 @@
 process ENTAP_RUN {
-    label 'process_medium'
+    label 'process_high'
 
     container "systemsgenetics/entap:flask"
 
