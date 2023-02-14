@@ -23,6 +23,9 @@ if (params.entap_config) {
     ch_entap_config_file = channel.fromPath("${baseDir}/assets/entap_config.ini", checkIfExists: true)
 }
 
+// Use a dummyfile to force-run processes (specifically, Entap-Run) to run with empty channels
+dummyfile = "${baseDir}/assets/dummyfile"
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     CONFIG FILES
@@ -313,13 +316,20 @@ workflow ENTAPNF {
             blastx_string(ch_split_seqs.string, db, 'xml', '')
         }
     }
+
     //
     // InterProScan
     //
+
+    // Use a dummy file as default - entap process wouldn't run when this was empty,
+    // i.e. when trying to run the workflow without InterProScan
+    ch_ipro = Channel.fromPath(dummyfile)
+
     if (params.data_ipr) {
 
         if (params.seq_type == 'pep') {
             interproscan_pep(ch_split_seqs.ipr, params.seq_type)
+
             interproscan_pep.out.outfiles
                 .map { it[1] }
                 .flatten()
@@ -328,10 +338,14 @@ workflow ENTAPNF {
                     xml: it.getFileName().toString().endsWith(".xml")
                 }
                 .set { interproscan_pep_out }
-            interproscan_combine(interproscan_pep_out.tsv.collect(), sequence_filename)
+
+            ch_ipro = interproscan_combine(interproscan_pep_out.tsv.collect(), sequence_filename)
+            ch_ipro = ch_ipro.tsv
         }
+
         if (params.seq_type == 'nuc') {
             interproscan_nuc(ch_split_seqs.ipr, params.seq_type)
+
             interproscan_nuc.out.outfiles
                 .map { it[1] }
                 .flatten()
@@ -340,7 +354,9 @@ workflow ENTAPNF {
                     xml: it.getFileName().toString().endsWith(".xml")
                 }
                 .set { interproscan_nuc_out }
-            interproscan_combine(interproscan_nuc_out.tsv.collect(), sequence_filename)
+
+            ch_ipro = interproscan_combine(interproscan_nuc_out.tsv.collect(), sequence_filename)
+            ch_ipro = ch_ipro.tsv
         }
     }
 
@@ -395,7 +411,8 @@ workflow ENTAPNF {
             entap_config.out.eggnog_db,
             entap_config.out.data_eggnog,
             ch_blast_results.collect(),
-            interproscan_combine.out.tsv)
+            ch_ipro
+            )
     }
 
 }
