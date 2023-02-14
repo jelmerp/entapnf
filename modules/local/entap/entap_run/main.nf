@@ -1,5 +1,5 @@
 process ENTAP_RUN {
-    label 'process_high'
+    label 'process_long'
 
     container "systemsgenetics/entap:flask"
 
@@ -34,13 +34,11 @@ process ENTAP_RUN {
     perl -pi -e "s/eggnog-dmnd=eggnog_proteins.dmnd/eggnog-dmnd=\$CWD\\\\/$data_eggnog/" finalconf.$entap_config
     perl -pi -e "s/eggnog-sql=eggnog.db/eggnog-sql=\$CWD\\\\/$eggnog_db/" finalconf.$entap_config
 
-    # Link the blast files to the directory EnTAP expects so it doesn't
-    # rerun those.
+    # Link the blast files to the directory EnTAP expects so it doesn't rerun those.
     mkdir -p \$PWD/outfiles/similarity_search/DIAMOND
-    files=`ls blast*.out`
-    for f in \$files; do
+    for f in blast*.out; do
         ln -s \$PWD/\$f \$PWD/outfiles/similarity_search/DIAMOND/\$f
-    done;
+    done
 
     # Link the InterProScan file to the diretory EnTAP expects
     mkdir -p \$PWD/outfiles/ontology/InterProScan
